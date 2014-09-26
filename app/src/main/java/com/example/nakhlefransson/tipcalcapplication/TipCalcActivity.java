@@ -18,10 +18,10 @@ import android.widget.RadioButton;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
+import java.util.concurrent.TimeUnit;
 
 
-
-public class TipCalcActivity extends Activity {
+public class TipCalcActivity extends Activity implements Chronometer.OnChronometerTickListener{
     //Konstanter som används när du sparar och återställa//
     //Sparar informationen om nån stänger ner appen och kommer tillbaka till den//
     private static final String TOTAL_BILL = "TOTAL_BILL";
@@ -39,9 +39,10 @@ public class TipCalcActivity extends Activity {
     EditText tipAmountET;
     EditText finalBillET;
 
+    private int[] checklistValues = new int[12];
+
     SeekBar tipSeekBar;
 
-    private int[] checklistValues = new int[12];
     //DEKLARERAR CHECKBOXARNA//
     CheckBox friendlyCheckBox;
     CheckBox specialsCheckBox;
@@ -65,81 +66,76 @@ public class TipCalcActivity extends Activity {
 
     TextView timeWaitingTextView;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tip_calc);
 
         //KOLLAR OM APPEN HAR PRECIS STARTAT ELLER STARTATS OM OCH SÄTTER DE URSPRUNGLIGA VÄRERNA//
-        if(savedInstanceState == null){ //OM DEN PRECIS HAR STARTAT//
-
+        if (savedInstanceState == null) { //OM DEN PRECIS HAR STARTAT//
             billBeforeTip = 0.0;//SÄTTER URSPRUNGLIGA VÄRDERNA//
             tipAmount = .15;
             finalBill = 0.0;
+            //ELLER HÄMTA SÄTT DE INFORMATIONEN SOM HAR SPARATS//
 
-        //ELLER HÄMTA SÄTT DE INFORMATIONEN SOM HAR SPARATS//
         } else {
-
             billBeforeTip = savedInstanceState.getDouble(BILL_WITHOUT_TIP);
             tipAmount = savedInstanceState.getDouble(CURRENT_TIP);
             finalBill = savedInstanceState.getDouble(TOTAL_BILL);
         }
 
         //INTIELLRAR TEXT BOXARNA//
-        billBeforeTipET = (EditText)findViewById(R.id.billEditText);
-        tipAmountET = (EditText)findViewById(R.id.tipEditText);
-        finalBillET = (EditText)findViewById(R.id.finalBillEditText);
+        billBeforeTipET = (EditText) findViewById(R.id.billEditText);
+        tipAmountET = (EditText) findViewById(R.id.tipEditText);
+        finalBillET = (EditText) findViewById(R.id.finalBillEditText);
 
         //INITIALISERA EN SEEKBAR OCH LÄGGER TILL EN CHANGELISTERNER//
-        tipSeekBar =(SeekBar)findViewById(R.id.changeTipSeekBar);
+        tipSeekBar = (SeekBar) findViewById(R.id.changeTipSeekBar);
         tipSeekBar.setOnSeekBarChangeListener(tipSeekBarListener);
 
         //LÄGGER TILL EN CHANGELISTERNER FÖR NÄR NOTAN INNAN DRICKSEN ÄR ÄNDRAD//
         billBeforeTipET.addTextChangedListener(billBeforeTipListener);
 
         //INITIALISERA CHEKBOXARNA//
-        friendlyCheckBox = (CheckBox)findViewById(R.id.friendlyCheckBox);
-        specialsCheckBox = (CheckBox)findViewById(R.id.specialsCheckBox);
-        opinionCheckBox = (CheckBox)findViewById(R.id.opinionCheckBox);
-
+        friendlyCheckBox = (CheckBox) findViewById(R.id.friendlyCheckBox);
+        specialsCheckBox = (CheckBox) findViewById(R.id.specialsCheckBox);
+        opinionCheckBox = (CheckBox) findViewById(R.id.opinionCheckBox);
 
         setUpIntroCheckBoxes(); //
 
         //INITIALISERA RADIOBUTTONS//
-        availableBadRadio = (RadioButton)findViewById(R.id.badRadioButton);//
-        availableOkRadio = (RadioButton)findViewById(R.id.okRadioButton);//
-        availableGoodRadio = (RadioButton)findViewById(R.id.goodRadioButton); //
+        availableBadRadio = (RadioButton) findViewById(R.id.badRadioButton);//
+        availableOkRadio = (RadioButton) findViewById(R.id.okRadioButton);//
+        availableGoodRadio = (RadioButton) findViewById(R.id.goodRadioButton); //
 
         //LÄGGER CHANGELISTERNER TILL RADIOBUTTONS//
         addChangeListernerToRadios();
 
         //INITIALISERA SPINNERN//
-        problemsSpinner = (Spinner)findViewById(R.id.problemsSpinner);
+        problemsSpinner = (Spinner) findViewById(R.id.problemsSpinner);
 
         addItemSelectedListernerToSpinner();
 
         //INITIALISERA KNAPPARNA//
-        startChronometerButton  = (Button)findViewById(R.id.startChronometerButton);
-        pauseChronometerButton  = (Button)findViewById(R.id.pauseChronometerButton);
-        resetChronometerButton  = (Button)findViewById(R.id.resetChronometerButton);
+        startChronometerButton = (Button) findViewById(R.id.startChronometerButton);
+        pauseChronometerButton = (Button) findViewById(R.id.pauseChronometerButton);
+        resetChronometerButton = (Button) findViewById(R.id.resetChronometerButton);
 
         //SÄTTER ONCLICKLISTERNERS FÖR KNAPPARNA//
         setButtonOnClickListerners();
 
         //INITIALISERA TIDTAGNINGEN//
-        timeWaitingChronometer = (Chronometer)findViewById(R.id.timeWatingChronometer);
+        timeWaitingChronometer = (Chronometer) findViewById(R.id.timeWatingChronometer);
+        timeWaitingChronometer.setOnChronometerTickListener(this);
         //TEXT VIEW FÖR TIDTAGNINGEN//
-        timeWaitingTextView =(TextView)findViewById(R.id.timeWatingTextView);
-
-
+        timeWaitingTextView = (TextView) findViewById(R.id.timeWatingTextView);
     }
 
     //KALLAS NÄR NOTAN INNAN DRICKSEN ÄNDRAS//
     private TextWatcher billBeforeTipListener = new TextWatcher() {
+
         @Override
         public void beforeTextChanged(CharSequence charSequence, int i, int i2, int i3) {
-
         }
 
         @Override
@@ -147,8 +143,7 @@ public class TipCalcActivity extends Activity {
             try {
                 //ÄNDRAR BELLOPET INNAN DRICKSEN FÖR DEN NYA INMATNINGEN//
                 billBeforeTip = Double.parseDouble(s.toString());
-            }
-            catch (NumberFormatException e){
+            } catch (NumberFormatException e) {
                 billBeforeTip = 0.0;
             }
             updateTipAndFinalBill();//UPPDATERAR//
@@ -161,7 +156,7 @@ public class TipCalcActivity extends Activity {
     };
 
     //UPPDATERAR TIPAMOUNT OCH LÄGGER TILL DRICKSEN//
-    private void updateTipAndFinalBill(){
+    private void updateTipAndFinalBill() {
         //HÄMTAR TIPaMOUNT
         double tipAmount = Double.parseDouble(tipAmountET.getText().toString());
         //HÄMTAR NOTAN INKLUSIVE DRICKSEN
@@ -172,14 +167,11 @@ public class TipCalcActivity extends Activity {
 
     //UPPDATERAR OM MAN TILL EXEMPEL LÄMNAR APPEN OCH KOMMER TILLBAKA TILL DEN//
     @Override
-    protected void onSaveInstanceState(Bundle outState){
+    protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-
         outState.putDouble(TOTAL_BILL, finalBill);
         outState.putDouble(CURRENT_TIP, tipAmount);
         outState.putDouble(BILL_WITHOUT_TIP, billBeforeTip);
-
-
     }
 
     //SEEKBAR GJORD FÖR ATT GÖRA EN ANPASSNINGSBAR DRICKS//
@@ -188,14 +180,14 @@ public class TipCalcActivity extends Activity {
         public void onProgressChanged(SeekBar arg0, int arg1, boolean arg2) {
 
             //HÄMTAR DEN INSTÄLLDA VÄRDET TILL SEEKBARN//
-            tipAmount = (tipSeekBar.getProgress())*.01;
+            tipAmount = (tipSeekBar.getProgress()) * .01;
 
             //SÄTTER TIPAMMOUNT MED VÄRDET TILL SEEKBAR//
             tipAmountET.setText(String.format("%.02f", tipAmount));
 
             //UPPDATERAR ALLA EDITTEXT//
             updateTipAndFinalBill();
-        }
+        };
 
         @Override
         public void onStartTrackingTouch(SeekBar seekBar) {
@@ -208,15 +200,14 @@ public class TipCalcActivity extends Activity {
         }
     };
 
-
-    private void  setUpIntroCheckBoxes(){
+    private void setUpIntroCheckBoxes() {
         //LÄGGER CHANGELISTERNER TILL FRIENDLYCHECKBOXEN//
-        friendlyCheckBox.setOnCheckedChangeListener(new CheckBox.OnCheckedChangeListener(){
+        friendlyCheckBox.setOnCheckedChangeListener(new CheckBox.OnCheckedChangeListener() {
 
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 //SÄTTER DEN RÄTTA VÄRDET FÖR VARJE POST FÖR SERVERARENS CHECKBOX LISTASN//
-                checklistValues[0] = (friendlyCheckBox.isChecked())?4:0;
+                checklistValues[0] = (friendlyCheckBox.isChecked()) ? 4 : 0;
 
                 //KALKULERAR DRICKSEN MED HJÄLP AV CHECKLISTAN//
                 setTipFromWaitressChecklist();
@@ -226,12 +217,12 @@ public class TipCalcActivity extends Activity {
         });
 
         //LÄGGER CHANGELISTERNER TILL SPECIAL CHECKBOXEN//
-        specialsCheckBox.setOnCheckedChangeListener(new CheckBox.OnCheckedChangeListener(){
+        specialsCheckBox.setOnCheckedChangeListener(new CheckBox.OnCheckedChangeListener() {
 
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 //SÄTTER DEN RÄTTA VÄRDET FÖR VARJE POST FÖR SERVERARENS CHECKBOX LISTAN//
-                checklistValues[1] = (specialsCheckBox.isChecked())?1:0;
+                checklistValues[1] = (specialsCheckBox.isChecked()) ? 1 : 0;
 
                 //KALKULERAR DRICKSEN MED HJÄLP AV CHECKLISTAN//
                 setTipFromWaitressChecklist();
@@ -240,12 +231,12 @@ public class TipCalcActivity extends Activity {
             }
         });
 
-        opinionCheckBox.setOnCheckedChangeListener(new CheckBox.OnCheckedChangeListener(){
+        opinionCheckBox.setOnCheckedChangeListener(new CheckBox.OnCheckedChangeListener() {
 
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 //SÄTTER DEN RÄTTA VÄRDET FÖR VARJE POST FÖR SERVERARENS CHECKBOX LISTASN//
-                checklistValues[2] = (opinionCheckBox.isChecked())?2:0;
+                checklistValues[2] = (opinionCheckBox.isChecked()) ? 2 : 0;
 
                 //KALKULERAR DRICKSEN MED HJÄLP AV CHECKLISTAN//
                 setTipFromWaitressChecklist();
@@ -256,12 +247,12 @@ public class TipCalcActivity extends Activity {
     }
 
     //KALKULERAR DRICKSEN MED HJÄLP AV CHECKLISTANS ALTERNATIV//
-    private void setTipFromWaitressChecklist(){
+    private void setTipFromWaitressChecklist() {
 
         int checklistTotal = 0;
 
         //GÅR IGENOM ALLA CHECKLISTA VÄRDERNA FÖR ATT RÄKNA UT TOTALSUMMA BEROENDE PÅ SERVITÖRENS PRESTANDA//
-        for(int item : checklistValues){
+        for (int item : checklistValues) {
 
             checklistTotal += item;
         }
@@ -274,10 +265,8 @@ public class TipCalcActivity extends Activity {
 
         availableBadRadio.setOnCheckedChangeListener(new RadioButton.OnCheckedChangeListener() {
             @Override
-
-
-            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                checklistValues[3] = (availableBadRadio.isChecked())?-1:0;
+           public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                checklistValues[3] = (availableBadRadio.isChecked()) ? -1 : 0;
 
                 setTipFromWaitressChecklist();
 
@@ -288,7 +277,7 @@ public class TipCalcActivity extends Activity {
         availableBadRadio.setOnCheckedChangeListener(new RadioButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                checklistValues[4] = (availableOkRadio.isChecked())?2:0;
+                checklistValues[4] = (availableOkRadio.isChecked()) ? 2 : 0;
 
                 setTipFromWaitressChecklist();
 
@@ -299,7 +288,7 @@ public class TipCalcActivity extends Activity {
         availableBadRadio.setOnCheckedChangeListener(new RadioButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                checklistValues[5] = (availableGoodRadio.isChecked())?4:0;
+                checklistValues[5] = (availableGoodRadio.isChecked()) ? 4 : 0;
 
                 setTipFromWaitressChecklist();
 
@@ -308,21 +297,18 @@ public class TipCalcActivity extends Activity {
         });
     }
 
-
-    private void addItemSelectedListernerToSpinner(){
+    private void addItemSelectedListernerToSpinner() {
 
         problemsSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
 
-                checklistValues[6] = (problemsSpinner.getSelectedItem()).equals("Bad")?-1:0;
-                checklistValues[7] = (problemsSpinner.getSelectedItem()).equals("Ok")?3:0;
-                checklistValues[8] = (problemsSpinner.getSelectedItem()).equals("Good")?6:0;
+                checklistValues[6] = (String.valueOf(problemsSpinner.getSelectedItem()).equals("Bad")) ? -1 : 0;
+                checklistValues[7] = (String.valueOf(problemsSpinner.getSelectedItem()).equals("Ok")) ? 3 : 0;
+                checklistValues[8] = (String.valueOf(problemsSpinner.getSelectedItem()).equals("Good")) ? 6 : 0;
 
                 setTipFromWaitressChecklist();
-
                 updateTipAndFinalBill();
-
             }
 
             @Override
@@ -333,12 +319,11 @@ public class TipCalcActivity extends Activity {
         });
     }
 
-
     private void setButtonOnClickListerners() {
 
         startChronometerButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
+            public void onClick(View arg0) {
                 int stoppedMilliseconds = 0;
 
                 String chronoText = timeWaitingChronometer.getText().toString();
@@ -361,7 +346,7 @@ public class TipCalcActivity extends Activity {
                 secondsYouWaited = Long.parseLong(array[1]);
 
                 //uppdaterar//
-                updateTipBasedOnTimeWaited(secondsYouWaited);
+                //updateTipBasedOnTimeWaited(secondsYouWaited);
                 //STARTA CHRONROMETERN//
                 timeWaitingChronometer.start();
             }
@@ -393,15 +378,6 @@ public class TipCalcActivity extends Activity {
         });
     }
 
-    private void updateTipBasedOnTimeWaited(long secondsYouWaited) {
-        //OM MAN HAR VÄNTAT MER ÄN 10 SEKUNDER SÅ DRAR MAN AV 2 FRÅN DRICKSEN,ANNARS FÅR HON 2//
-        checklistValues[9]  = (secondsYouWaited > 10)?-2:2;
-       //LÄGGER TILL
-        setTipFromWaitressChecklist();
-        //UPPDATERAR
-        updateTipAndFinalBill();
-
-    }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -417,4 +393,20 @@ public class TipCalcActivity extends Activity {
         int id = item.getItemId();
         return id == R.id.action_settings || super.onOptionsItemSelected(item);
     }
-}
+
+    @Override
+    public void onChronometerTick(Chronometer chronometer) {
+        //Hämta hur många sek som har gått
+
+        if(TimeUnit.MILLISECONDS.toSeconds(SystemClock.elapsedRealtime()-chronometer.getBase()) == 20){
+
+            double currentTip = Double.parseDouble(tipAmountET.getText().toString());
+            double newTip = currentTip - 0.01;
+            tipAmountET.setText(String.valueOf(newTip));
+
+            String bill = billBeforeTipET.getText().toString();
+            finalBillET.setText(String.valueOf(Double.parseDouble(bill) - newTip));
+        }
+       }
+    }
+
